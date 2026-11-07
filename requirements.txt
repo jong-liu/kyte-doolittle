@@ -7,3 +7,5 @@ python-dotenv==1.0.0
 firebase-admin==6.2.0
 biopython==1.81
 pydantic==2.5.0
+pytest==7.4.3
+pytest-asyncio==0.21.1
