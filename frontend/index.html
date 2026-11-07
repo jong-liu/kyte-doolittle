@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kyte–Doolittle Hydropathy Scale Calculator</title>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 25px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .panel h2 {
+            color: #667eea;
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+            font-family: monospace;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-size: 0.9em;
+        }
+
+        .range-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .range-value {
+            min-width: 50px;
+            text-align: right;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.05em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        button.secondary {
+            background: #e0e0e0;
+            color: #333;
+            margin-top: 8px;
+        }
+
+        button.secondary:hover:not(:disabled) {
+            background: #d0d0d0;
+        }
+
+        .plot-container {
+            position: relative;
+        }
+
+        #plot {
+            width: 100%;
+            height: 500px;
+            border-radius: 8px;
+        }
+
+        .stats {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .stats.show {
+            display: block;
+        }
+
+        .stat-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 12px;
+        }
+
+        .stat-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            color: #333;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 4px;
+            font-family: monospace;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #e0e0e0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #999;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: color 0.2s;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            margin-top: 15px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .help-text {
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .stat-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧬 Kyte–Doolittle Hydropathy Scale</h1>
+            <p>預測蛋白質疏水性域與跨膜螺旋結構</p>
+        </header>
+
+        <div class="content">
+            <!-- 左側：輸入面板 -->
+            <div class="panel">
+                <h2>📋 輸入</h2>
+
+                <div class="error" id="error-msg"></div>
+
+                <div class="form-group">
+                    <label>蛋白質序列</label>
+                    <textarea id="sequence" placeholder="粘貼 FASTA 格式、UniProtKB AC/ID 或直接序列&#10;例如：MVLSPADKTNVI 或 P12345 或 TP53_HUMAN&#10;或：&#10;>sp|P12345|ABC_HUMAN&#10;MVLSPADKTNVI" required></textarea>
+                    <div class="help-text">✓ FASTA 格式 | ✓ UniProtKB AC (P12345) | ✓ UniProtKB ID (TP53_HUMAN) | ✓ 原始序列</div>
+                </div>
+
+                <h2 style="margin-top: 25px;">⚙️ 參數</h2>
+
+                <div class="form-group">
+                    <label>Window Size（窗口大小）</label>
+                    <div class="range-container">
+                        <input type="range" id="windowSize" min="3" max="21" step="2" value="9">
+                        <span class="range-value" id="windowSizeValue">9</span>
+                    </div>
+                    <div class="help-text">奇數 3–21，預設 9</div>
+                </div>
+
+                <div class="form-group">
+                    <label>邊界權重 (%)（Edge Weight）</label>
+                    <div class="range-container">
+                        <input type="range" id="edgeWeight" min="0" max="100" step="5" value="100">
+                        <span class="range-value" id="edgeWeightValue">100%</span>
+                    </div>
+                    <div class="help-text">窗口邊界相對權重，預設 100%</div>
+                </div>
+
+                <div class="form-group">
+                    <label>權重模式（Weight Model）</label>
+                    <select id="weightModel">
+                        <option value="linear">Linear（線性遞減）</option>
+                        <option value="exponential">Exponential（指數遞減）</option>
+                    </select>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="normalize">
+                    <label for="normalize">正規化結果 (0–1)</label>
+                </div>
+                <div class="help-text">勾選可將結果正規化至 0–1 範圍</div>
+
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="queryUniprot" checked>
+                    <label for="queryUniprot">查詢 UniProtKB（如為 AC/ID）</label>
+                </div>
+
+                <button id="calculateBtn" onclick="calculate()">🔬 計算</button>
+                <button id="clearBtn" class="secondary" onclick="clearAll()">🗑️ 清空</button>
+            </div>
+
+            <!-- 右側：結果展示 -->
+            <div class="plot-container">
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <span>計算中...</span>
+                </div>
+
+                <div id="plot"></div>
+
+                <div class="stats" id="stats">
+                    <h3 style="margin-bottom: 15px;">📊 統計資訊</h3>
+                    <div class="stat-row">
+                        <div class="stat-item">
+                            <div class="stat-label">序列長度</div>
+                            <div class="stat-value" id="stat-length">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小值</div>
+                            <div class="stat-value" id="stat-min">-</div>
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-item">
+                            <div class="stat-label">最大值</div>
+                            <div class="stat-value" id="stat-max">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">平均值</div>
+                            <div class="stat-value" id="stat-mean">-</div>
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-item">
+                            <div class="stat-label">標準差</div>
+                            <div class="stat-value" id="stat-std">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">資料來源</div>
+                            <div class="stat-value" id="stat-source">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('download')">💾 下載</button>
+                    <button class="tab-btn" onclick="switchTab('info')">ℹ️ 說明</button>
+                </div>
+
+                <div id="download" class="tab-content active">
+                    <button id="downloadCsv" class="secondary" onclick="downloadCsv()" style="display: none;">📥 下載 CSV</button>
+                    <button id="downloadPlot" class="secondary" onclick="downloadPlot()" style="display: none;">📥 下載圖表 (PNG)</button>
+                </div>
+
+                <div id="info" class="tab-content">
+                    <div class="help-text" style="line-height: 1.8;">
+                        <strong>📖 關於 Kyte–Doolittle Hydropathy Scale</strong><br>
+                        經典方法預測蛋白質疏水性域。正值 > 0 表疏水性（傾向跨膜），負值 < 0 表親水性（傾向溶液）。<br><br>
+                        <strong>🔬 用途：</strong><br>
+                        • 預測跨膜螺旋（7-TM 結構）<br>
+                        • 分析蛋白質親疏水域<br>
+                        • 藥物靶點評估<br><br>
+                        <strong>📚 參考：</strong><br>
+                        Kyte J., Doolittle R.F. "A simple method for displaying the hydropathic character of a protein"
+                        <em>J. Mol. Biol.</em> 157:105-132 (1982)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';  // 開發環境；部署時改為生產 URL
+
+        // 監聽滑塊變化
+        document.getElementById('windowSize').addEventListener('input', (e) => {
+            document.getElementById('windowSizeValue').textContent = e.target.value;
+        });
+
+        document.getElementById('edgeWeight').addEventListener('input', (e) => {
+            document.getElementById('edgeWeightValue').textContent = e.target.value + '%';
+        });
+
+        async function calculate() {
+            const sequence = document.getElementById('sequence').value.trim();
+            if (!sequence) {
+                showError('請輸入蛋白質序列');
+                return;
+            }
+
+            const params = {
+                sequence: sequence,
+                window_size: parseInt(document.getElementById('windowSize').value),
+                edge_weight: parseFloat(document.getElementById('edgeWeight').value),
+                weight_model: document.getElementById('weightModel').value,
+                normalize: document.getElementById('normalize').checked,
+                query_uniprot: document.getElementById('queryUniprot').checked
+            };
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('calculateBtn').disabled = true;
+            hideError();
+
+            try {
+                const response = await fetch(`${API_URL}/calculate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || '計算失敗');
+                }
+
+                const result = await response.json();
+                displayResults(result);
+            } catch (error) {
+                showError(`錯誤：${error.message}`);
+                console.error(error);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('calculateBtn').disabled = false;
+            }
+        }
+
+        function displayResults(result) {
+            const scores = result.scores;
+            const meta = result.metadata;
+
+            // 繪製圖表
+            const positions = Array.from({ length: scores.length }, (_, i) => i + 1);
+            const trace = {
+                x: positions,
+                y: scores,
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: { color: '#667eea', width: 2 },
+                marker: { size: 4, opacity: 0.7 },
+                hovertemplate: '<b>位置</b>: %{x}<br><b>Score</b>: %{y:.3f}<extra></extra>'
+            };
+
+            const layout = {
+                title: `Hydropathy Profile (Window: ${meta.window_size})`,
+                xaxis: { title: '蛋白質位置 (Amino Acid Position)' },
+                yaxis: { title: '疏水性指數 (Hydropathy Score)' },
+                hovermode: 'x unified',
+                plot_bgcolor: '#f8f9fa',
+                paper_bgcolor: 'white',
+                margin: { l: 70, r: 30, t: 50, b: 60 }
+            };
+
+            Plotly.newPlot('plot', [trace], layout, { responsive: true });
+
+            // 更新統計資訊
+            document.getElementById('stat-length').textContent = meta.sequence_length;
+            document.getElementById('stat-min').textContent = meta.min.toFixed(3);
+            document.getElementById('stat-max').textContent = meta.max.toFixed(3);
+            document.getElementById('stat-mean').textContent = meta.mean.toFixed(3);
+            document.getElementById('stat-std').textContent = meta.std.toFixed(3);
+            document.getElementById('stat-source').textContent =
+                result.sequence_source === 'uniprot' ? `UniProtKB (${result.sequence_id})` : result.sequence_source;
+
+            document.getElementById('stats').classList.add('show');
+
+            // 顯示下載按鈕
+            document.getElementById('downloadCsv').style.display = 'block';
+            document.getElementById('downloadPlot').style.display = 'block';
+
+            // 存儲結果供下載用
+            window.lastResult = { scores, positions, params: result };
+        }
+
+        function downloadCsv() {
+            if (!window.lastResult) return;
+
+            const { scores, positions } = window.lastResult;
+            let csv = 'Position,Hydropathy Score\n';
+            positions.forEach((pos, i) => {
+                csv += `${pos},${scores[i].toFixed(6)}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hydropathy_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function downloadPlot() {
+            Plotly.downloadImage('plot', { format: 'png', width: 1200, height: 600, filename: 'hydropathy_plot' });
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function showError(msg) {
+            const errorEl = document.getElementById('error-msg');
+            errorEl.textContent = msg;
+            errorEl.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('error-msg').classList.remove('show');
+        }
+
+        function clearAll() {
+            document.getElementById('sequence').value = '';
+            document.getElementById('windowSize').value = '9';
+            document.getElementById('windowSizeValue').textContent = '9';
+            document.getElementById('edgeWeight').value = '100';
+            document.getElementById('edgeWeightValue').textContent = '100%';
+            document.getElementById('weightModel').value = 'linear';
+            document.getElementById('normalize').checked = false;
+            document.getElementById('queryUniprot').checked = true;
+            document.getElementById('stats').classList.remove('show');
+            document.getElementById('downloadCsv').style.display = 'none';
+            document.getElementById('downloadPlot').style.display = 'none';
+            hideError();
+            Plotly.purge('plot');
+        }
+    </script>
+</body>
+</html>
